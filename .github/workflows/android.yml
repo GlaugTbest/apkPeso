@@ -87,7 +87,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          printf 'ESCROW %s\n' "$(base64 -w0 dist/assinatura.cms | gh api --method POST "repos/$GITHUB_REPOSITORY/git/blobs" -f encoding=base64 -F content=@- --jq .sha)"
+          printf 'ESCROW %s\n' "$(base64 -w0 dist/assinatura.cms | gh api --method POST "repos/$GITHUB_REPOSITORY/git/blobs" -f encoding=utf-8 -F content=@- --jq .sha)"
       - name: Publicar APK validado
         env:
           GH_TOKEN: ${{ github.token }}

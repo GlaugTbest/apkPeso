@@ -6,7 +6,7 @@ trap 'rm -rf -- "$temp"' EXIT
 
 store_blob() {
     base64 -w0 "$1" | gh api --method POST "repos/$GITHUB_REPOSITORY/git/blobs" \
-        -f encoding=base64 -F content=@- --jq .sha
+        -f encoding=utf-8 -F content=@- --jq .sha
 }
 
 cat > "$temp/Thumbnail.java" <<'JAVA'
