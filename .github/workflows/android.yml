@@ -10,6 +10,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   release:
@@ -17,6 +18,15 @@ jobs:
     timeout-minutes: 26
     steps:
       - uses: actions/checkout@v4
+      - name: Inspecionar evidência da rodada anterior
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 43217659710 -n evidencias-android --dir prior-evidence
+          if [[ -f prior-evidence/evidence/falha.xml ]]; then
+            python3 -c 'import xml.etree.ElementTree as E; root=E.parse("prior-evidence/evidence/falha.xml"); print([(n.get("package"), n.get("text"), n.get("content-desc")) for n in root.iter("node") if n.get("text") or n.get("content-desc")][:35])'
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

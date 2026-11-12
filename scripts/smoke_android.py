@@ -131,7 +131,9 @@ def off_recents():
 
 
 def app_open():
-    shell("am", "start", "-n", ACTIVITY)
+    result = shell("am", "start", "-W", "-n", ACTIVITY)
+    check("Error" not in result, "Falha ao abrir o app: " + result)
+    return result
 
 
 def fields():
@@ -207,13 +209,17 @@ def verify_build(apk):
     shell("settings", "put", "global", "auto_time_zone", "0")
     shell("cmd", "alarm", "set-timezone", "Etc/UTC")
     shell("settings", "put", "secure", "show_ime_with_hard_keyboard", "1")
-    set_clock("2026-11-12T08:00:00")
     check("Success" in adb("install", str(apk), timeout=120), "Falha ao instalar APK")
     step("Android " + shell("getprop", "ro.build.version.release") +
          " · API " + shell("getprop", "ro.build.version.sdk") +
          " · " + shell("wm", "size") + " · " + shell("wm", "density"))
-    app_open()
-    visible("Bebi água")
+    shell("input", "keyevent", "KEYCODE_WAKEUP")
+    shell("wm", "dismiss-keyguard")
+    shell("input", "keyevent", "KEYCODE_HOME")
+    time.sleep(2)
+    step(app_open())
+    visible("Bebi água", timeout=35)
+    set_clock("2026-11-12T08:00:00")
 
     tap("Configurações")
     visible("Notificações bloqueadas")
@@ -354,7 +360,11 @@ if __name__ == "__main__":
     except Exception:
         try:
             screenshot("falha")
-            (EVIDENCE / "falha.xml").write_text(ET.tostring(dump(), encoding="unicode"), encoding="utf-8")
+            root = dump()
+            (EVIDENCE / "falha.xml").write_text(ET.tostring(root, encoding="unicode"), encoding="utf-8")
+            print("Tela:", [(n.get("package"), n.get("text"), n.get("content-desc"))
+                            for n in root.iter("node") if n.get("text") or n.get("content-desc")][:40])
+            print("Android:", shell("logcat", "-d", "-t", "160", "-s", "AndroidRuntime", "ActivityTaskManager", "GtheDay")[-6000:])
         except Exception as diagnostic:
             print(diagnostic, file=sys.stderr)
         raise
