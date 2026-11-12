@@ -1,0 +1,14 @@
+name: Android runner
+on:
+  push:
+    paths:
+      - '.github/workflows/android.yml'
+jobs:
+  environment:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          java -version
+          gradle -v
+          ls "$ANDROID_HOME"
+          ls -l /dev/kvm
