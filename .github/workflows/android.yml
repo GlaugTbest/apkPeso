@@ -4,6 +4,10 @@ on:
     branches: [gtheday]
   workflow_dispatch:
 
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -48,6 +52,14 @@ jobs:
           path: |
             evidence/
             app/build/test-results/testReleaseUnitTest/
+      - name: Guardar APK testado
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GtheDay-apk
+          path: |
+            dist/GtheDay.apk
+            dist/GtheDay.apk.sha256
       - name: Guardar cópia criptografada da chave
         if: success()
         uses: actions/upload-artifact@v4
@@ -58,8 +70,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$GITHUB_REF_NAME" == gtheday ]]; then
+            test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/gtheday" --jq .object.sha)" = "$GITHUB_SHA"
+          fi
           if gh release view v1.0.0 >/dev/null 2>&1; then
-            echo 'A versão 1.0.0 já foi publicada.'
+            test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v1.0.0" --jq .object.sha)" = "$GITHUB_SHA"
             exit 0
           fi
           gh release create v1.0.0 --target "$GITHUB_SHA" --title 'GtheDay 1.0.0' \

@@ -93,13 +93,27 @@ def scroll_down():
 
 
 def off_recents():
-    shell("input", "keyevent", 187)
-    time.sleep(1)
-    swipe(WIDTH // 2, HEIGHT * 65 // 100, WIDTH // 2, HEIGHT * 13 // 100)
-    time.sleep(0.7)
-    recent = shell("dumpsys", "activity", "recents")
-    check(not any("Recent #" in line and PACKAGE in line for line in recent.splitlines()),
-          "O GtheDay ainda aparece em Recentes")
+    def is_listed():
+        recent = shell("dumpsys", "activity", "recents")
+        return any("Recent #" in line and PACKAGE in line for line in recent.splitlines())
+
+    check(is_listed(), "O GtheDay não tinha uma tarefa para remover de Recentes")
+    shell("input", "keyevent", "KEYCODE_APP_SWITCH")
+    time.sleep(1.2)
+    overview = dump()
+    nodes = [node for node in overview.iter("node")
+             if any(marker in node.get("resource-id", "")
+                    for marker in (":id/task_view", ":id/task_thumbnail"))]
+    coords = [center(node) for node in nodes if node.get("bounds")]
+    coords.extend([(WIDTH // 2, HEIGHT * 48 // 100), (WIDTH // 2, HEIGHT * 39 // 100)])
+    for x, y in coords:
+        if not is_listed():
+            break
+        swipe(x, y, x, HEIGHT * 8 // 100)
+    if is_listed():
+        print("Overview:", ET.tostring(overview, encoding="unicode")[:7000], flush=True)
+        print(shell("dumpsys", "activity", "recents")[:4000], flush=True)
+        raise AssertionError("O GtheDay ainda aparece em Recentes")
     shell("input", "keyevent", "KEYCODE_HOME")
 
 
@@ -176,6 +190,7 @@ def reboot():
 def verify_build(apk):
     adb("root")
     adb("wait-for-device", timeout=45)
+    shell("cmd", "connectivity", "airplane-mode", "enable")
     shell("settings", "put", "global", "auto_time", "0")
     shell("settings", "put", "global", "auto_time_zone", "0")
     shell("cmd", "alarm", "set-timezone", "Etc/UTC")
