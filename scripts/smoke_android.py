@@ -39,8 +39,19 @@ def wait_for(predicate, timeout, description):
 
 
 def dump():
-    shell("uiautomator", "dump", "/sdcard/gtheday-window.xml")
-    return ET.fromstring(adb("exec-out", "cat", "/sdcard/gtheday-window.xml"))
+    path = "/data/local/tmp/gtheday-window.xml"
+    failure = "sem resposta"
+    for _ in range(5):
+        try:
+            response = shell("uiautomator", "dump", path)
+            data = shell("cat", path)
+            if "dumped to:" in response.lower() and data.startswith("<?xml"):
+                return ET.fromstring(data)
+            failure = response + " / " + data[:160]
+        except (subprocess.CalledProcessError, ET.ParseError) as error:
+            failure = str(error)
+        time.sleep(0.5)
+    raise AssertionError("Não foi possível ler a interface: " + failure)
 
 
 def find(value, root=None):
@@ -93,27 +104,29 @@ def scroll_down():
 
 
 def off_recents():
-    def is_listed():
+    def task():
         recent = shell("dumpsys", "activity", "recents")
-        return any("Recent #" in line and PACKAGE in line for line in recent.splitlines())
+        for line in recent.splitlines():
+            if "Recent #" in line and PACKAGE in line:
+                match = re.search(r"Task\{[^}]* #(\d+)", line)
+                if match:
+                    return match[1]
+                raise AssertionError("Tarefa sem ID: " + line)
+        return None
 
-    check(is_listed(), "O GtheDay não tinha uma tarefa para remover de Recentes")
+    task_id = task()
+    check(task_id, "O GtheDay não tinha uma tarefa para remover de Recentes")
     shell("input", "keyevent", "KEYCODE_APP_SWITCH")
-    time.sleep(1.2)
-    overview = dump()
-    nodes = [node for node in overview.iter("node")
-             if any(marker in node.get("resource-id", "")
-                    for marker in (":id/task_view", ":id/task_thumbnail"))]
-    coords = [center(node) for node in nodes if node.get("bounds")]
-    coords.extend([(WIDTH // 2, HEIGHT * 48 // 100), (WIDTH // 2, HEIGHT * 39 // 100)])
-    for x, y in coords:
-        if not is_listed():
-            break
-        swipe(x, y, x, HEIGHT * 8 // 100)
-    if is_listed():
-        print("Overview:", ET.tostring(overview, encoding="unicode")[:7000], flush=True)
-        print(shell("dumpsys", "activity", "recents")[:4000], flush=True)
-        raise AssertionError("O GtheDay ainda aparece em Recentes")
+    time.sleep(0.8)
+    swipe(WIDTH // 2, HEIGHT // 2, WIDTH // 2, HEIGHT * 8 // 100)
+    if task():
+        # ActivityTaskManager.removeTask is also the operation behind dismissing
+        # the card in the launcher. It keeps the app out of the stopped state.
+        shell("am", "stack", "remove", task_id)
+        step("Tarefa removida via ActivityTaskManager")
+    else:
+        step("Cartão removido por gesto em Recentes")
+    wait_for(lambda: task() is None, 8, "O GtheDay ainda aparece em Recentes")
     shell("input", "keyevent", "KEYCODE_HOME")
 
 
@@ -190,7 +203,6 @@ def reboot():
 def verify_build(apk):
     adb("root")
     adb("wait-for-device", timeout=45)
-    shell("cmd", "connectivity", "airplane-mode", "enable")
     shell("settings", "put", "global", "auto_time", "0")
     shell("settings", "put", "global", "auto_time_zone", "0")
     shell("cmd", "alarm", "set-timezone", "Etc/UTC")
@@ -219,6 +231,7 @@ def verify_build(apk):
     visible("Notificações permitidas")
     screenshot("02-configuracoes")
     step("OK · instalação e permissão negada/permitida")
+    shell("cmd", "connectivity", "airplane-mode", "enable")
 
     tap("Hoje")
     tap("Bebi água")
@@ -303,7 +316,7 @@ def verify_build(apk):
     enter_meal("Jantar", "Frango e arroz", "07-jantar-teclado")
     step("OK · aviso após retirar dos recentes, alternância sem duplicação, adiamento e atalho do jantar")
 
-    set_clock("2026-11-13T09:55:30")
+    set_clock("2026-11-13T09:50:00")
     app_open()
     visible("Bebi água")
     visible("0 de 4 concluídos")
@@ -319,9 +332,10 @@ def verify_build(apk):
         scroll_down()
     visible("Frango e arroz e salada")
     off_recents()
+    set_clock("2026-11-13T09:58:05")
     reboot()
     wait_for(lambda: len(alarms()) > 0, 35, "Nenhum lembrete reagendado após reiniciar")
-    expect_notice("Água", seconds=295)
+    expect_notice("Água", seconds=130)
     screenshot("08-apos-reiniciar")
     step("OK · virada de dia, edição de ontem e aviso após reiniciar sem abrir o app")
 
