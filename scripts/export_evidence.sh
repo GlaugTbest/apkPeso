@@ -32,7 +32,7 @@ class Thumbnail {
 JAVA
 
 for screen in evidence/02-configuracoes.png evidence/03-hoje.png evidence/05-semana.png \
-    evidence/07-jantar-teclado.png evidence/falha.png prior-evidence/evidence/falha.png; do
+    evidence/07-jantar-teclado.png evidence/falha.png; do
     [ -f "$screen" ] || continue
     java -Djava.awt.headless=true "$temp/Thumbnail.java" "$screen" "$temp/screen.jpg"
     printf 'CAPTURA %s %s\n' "$(basename "$screen")" "$(store_blob "$temp/screen.jpg")"

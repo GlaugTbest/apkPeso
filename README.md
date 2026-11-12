@@ -4,7 +4,7 @@ Aplicativo Android pessoal para acompanhar alimentação e treino. Os registros 
 
 ## Instalação
 
-1. Baixe o arquivo GtheDay.apk na página de versões e abra-o no Android 8.0 ou posterior.
+1. Baixe o arquivo GtheDay.apk na [página de versões](https://github.com/GlaugTbest/apkPeso/releases/latest) e abra-o no Android 8.0 ou posterior.
 2. Se o Android pedir, autorize a instalação para o aplicativo que abriu o arquivo.
 3. Para receber lembretes, abra Configurações no GtheDay e permita notificações. Para avisos no horário, permita também alarmes exatos se a opção aparecer.
 

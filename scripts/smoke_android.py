@@ -195,9 +195,18 @@ def grant_permissions():
 
 
 def reboot():
+    boot_id = shell("cat", "/proc/sys/kernel/random/boot_id")
     adb("reboot")
     adb("wait-for-device", timeout=150)
-    wait_for(lambda: shell("getprop", "sys.boot_completed") == "1", 130, "Android não reiniciou")
+
+    def boot_finished():
+        try:
+            return (shell("cat", "/proc/sys/kernel/random/boot_id") != boot_id
+                    and shell("getprop", "sys.boot_completed") == "1")
+        except subprocess.CalledProcessError:
+            return False
+
+    wait_for(boot_finished, 130, "Android não reiniciou")
     shell("input", "keyevent", "KEYCODE_WAKEUP")
     shell("wm", "dismiss-keyguard")
 
@@ -283,13 +292,13 @@ def verify_build(apk):
     visible("37 min registrados")
     step("OK · água, desfazer, creatina, treino, cardio, refeições, medidas e persistência")
 
-    set_clock("2026-11-12T12:29:15")
+    set_clock("2026-11-12T12:29:40")
     off_recents()
-    time.sleep(50)
+    time.sleep(25)
     check(not active_reminder("Almoço"), "Almoço já registrado gerou aviso")
     step("OK · almoço concluído cancelou o aviso")
 
-    set_clock("2026-11-12T19:57:45")
+    set_clock("2026-11-12T19:58:30")
     app_open()
     tap("Configurações")
     scroll_down()
@@ -299,7 +308,7 @@ def verify_build(apk):
     tap("Lembrete de Jantar")
     wait_for(lambda: len(alarms()) == disabled_count + 1, 10, "Jantar não reagendado uma única vez")
     off_recents()
-    expect_notice("Jantar", seconds=145)
+    expect_notice("Jantar", seconds=105)
     shade()
     snooze = find("Lembrar em 30 min")
     if snooze is None:
@@ -338,10 +347,15 @@ def verify_build(apk):
         scroll_down()
     visible("Frango e arroz e salada")
     off_recents()
-    set_clock("2026-11-13T09:58:05")
     reboot()
-    wait_for(lambda: len(alarms()) > 0, 35, "Nenhum lembrete reagendado após reiniciar")
-    expect_notice("Água", seconds=130)
+    wait_for(lambda: len(alarms()) > 0, 45, "Nenhum lembrete reagendado após reiniciar")
+    step("OK · alarmes pendentes após reiniciar, antes de abrir o app ou alterar a hora")
+    # A reinicialização do AVD pode voltar o RTC para a data do host.
+    # Só restaure a data do cenário depois de verificar o reagendamento de boot.
+    adb("root")
+    adb("wait-for-device", timeout=45)
+    set_clock("2026-11-13T09:59:36")
+    expect_notice("Água", seconds=55)
     screenshot("08-apos-reiniciar")
     step("OK · virada de dia, edição de ontem e aviso após reiniciar sem abrir o app")
 
