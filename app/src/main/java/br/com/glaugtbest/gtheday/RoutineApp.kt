@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -86,7 +87,7 @@ fun RoutineApp(
             val previous = app.changeDay(date, habit, change)
             onSaved()
             snackbar.currentSnackbarData?.dismiss()
-            val result = snackbar.showSnackbar(message, actionLabel = "Desfazer")
+            val result = snackbar.showSnackbar(message, actionLabel = "Desfazer", duration = SnackbarDuration.Long)
             if (result == SnackbarResult.ActionPerformed) {
                 app.changeDay(date, habit) { latest ->
                     if (habit == null) latest.copy(weight = previous.weight, waist = previous.waist)

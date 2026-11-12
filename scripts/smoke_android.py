@@ -155,8 +155,9 @@ def collapse_shade():
 
 
 def alarms():
-    report = shell("dumpsys", "alarm")
-    return [line for line in report.splitlines() if "tag=" in line and PACKAGE + ".FIRE" in line]
+    report = shell("dumpsys", "alarm").split("Removal history:", 1)[0]
+    return [line for line in report.splitlines()
+            if line.strip().startswith("tag=") and PACKAGE + ".FIRE" in line]
 
 
 def grant_permissions():
@@ -190,7 +191,10 @@ def verify_build(apk):
     tap("Configurações")
     visible("Notificações bloqueadas")
     tap("Permitir notificações")
-    tap("Don’t allow") if find("Don’t allow") is not None else tap("Don't allow")
+    denied = wait_for(lambda: [n for n in dump().iter("node")
+                              if n.get("resource-id", "").endswith(":id/permission_deny_button")],
+                      20, "Permissão de notificações não apareceu")
+    shell("input", "tap", *center(denied[0]))
     visible("Notificações bloqueadas")
     check(not alarms(), "Foram agendados avisos com permissão negada")
     screenshot("01-permissao-negada")
@@ -212,7 +216,7 @@ def verify_build(apk):
     tap("30 min")
     visible("30 min registrados")
     tap("Outro")
-    field = fields()[0]
+    field = wait_for(fields, 15, "Campo de duração não apareceu")[0]
     shell("input", "tap", *center(field))
     shell("input", "keyevent", "KEYCODE_MOVE_END")
     shell("input", "keyevent", "KEYCODE_DEL", "KEYCODE_DEL")
@@ -229,7 +233,7 @@ def verify_build(apk):
         enter_meal(title, phrase, "04-editor" if title == "Almoço" else None)
     tap("Semana")
     tap("Registrar peso e cintura")
-    weight, waist = fields()
+    weight, waist = wait_for(fields, 15, "Campos de medidas não apareceram")
     shell("input", "tap", *center(weight))
     type_text("80,5")
     shell("input", "tap", *center(waist))
