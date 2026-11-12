@@ -53,4 +53,14 @@ class RoutineTest {
         assertEquals(lunch.plusDays(1), nextDaily(Habit.LUNCH, beforeLunch, completed = true))
         assertEquals(lunch.plusDays(1), nextDaily(Habit.LUNCH, lunch.plusMinutes(1), completed = false))
     }
+
+    @Test
+    fun delayedDailyReminderRemainsOutstandingWhenTheAppReopens() {
+        val lunch = ZonedDateTime.of(2026, 11, 12, 12, 30, 0, 0, zone)
+        val later = lunch.plusMinutes(25)
+        val pending = lunch.toInstant().toEpochMilli()
+        assertEquals(lunch, outstandingDaily(Habit.LUNCH, later, false, pending))
+        assertEquals(lunch.plusDays(1), outstandingDaily(Habit.LUNCH, later, true, pending))
+        assertEquals(lunch.plusDays(1), outstandingDaily(Habit.LUNCH, later, false, 0))
+    }
 }

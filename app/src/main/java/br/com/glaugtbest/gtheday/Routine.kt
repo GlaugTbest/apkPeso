@@ -65,3 +65,14 @@ fun nextDaily(habit: Habit, now: ZonedDateTime, completed: Boolean): ZonedDateTi
 fun parseDate(value: String?): LocalDate? = value?.let {
     runCatching { LocalDate.parse(it) }.getOrNull()
 }
+
+fun outstandingDaily(
+    habit: Habit,
+    now: ZonedDateTime,
+    suppressed: Boolean,
+    scheduledAt: Long
+): ZonedDateTime {
+    val today = now.toLocalDate().atTime(habit.time).atZone(now.zone)
+    if (!suppressed && today.toInstant().toEpochMilli() == scheduledAt) return today
+    return nextDaily(habit, now, completed = suppressed)
+}

@@ -29,7 +29,7 @@ class GtheDayApp : Application() {
             days.write(change(current))
             current
         }
-        if (habit != null && date == LocalDate.now()) reminders.reconcile(habit)
+        if (habit != null) reminders.reconcile(habit)
         previous
     }
 
@@ -45,9 +45,11 @@ class GtheDayApp : Application() {
     suspend fun handleReminder(action: String?, habit: Habit?, date: LocalDate?, at: Long) =
         operations.withLock {
             when (action) {
-                Reminders.FIRE -> if (habit != null && date != null) reminders.fire(habit, date, at)
+                Reminders.FIRE, Reminders.FIRE_SNOOZE -> if (habit != null && date != null) {
+                    reminders.fire(habit, date, at, snoozed = action == Reminders.FIRE_SNOOZE)
+                }
                 Reminders.SNOOZE -> if (habit != null && date != null) reminders.snooze(habit, date)
-                else -> Habit.entries.forEach { reminders.reconcile(it) }
+                else -> Habit.entries.forEach { reminders.reconcile(it, restore = true) }
             }
         }
 }
