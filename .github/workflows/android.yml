@@ -28,6 +28,9 @@ jobs:
       - name: Compilar e testar
         run: gradle --no-daemon :app:testReleaseUnitTest :app:assembleRelease
       - name: Assinar e verificar o APK
+        env:
+          GTHEDAY_KEYSTORE_BASE64: ${{ secrets.GTHEDAY_KEYSTORE_BASE64 }}
+          GTHEDAY_SIGN_PASSWORD: ${{ secrets.GTHEDAY_SIGN_PASSWORD }}
         run: bash scripts/sign_android.sh
       - name: Habilitar aceleração do emulador
         run: |
@@ -54,6 +57,7 @@ jobs:
             app/build/test-results/testReleaseUnitTest/
       - name: Registrar capturas para inspeção
         if: always()
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/export_evidence.sh
@@ -71,6 +75,11 @@ jobs:
         with:
           name: assinatura-criptografada
           path: dist/assinatura.cms
+      - name: Registrar cópia criptografada para recuperação
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf 'ESCROW %s\n' "$(base64 -w0 dist/assinatura.cms | gh api --method POST "repos/$GITHUB_REPOSITORY/git/blobs" -f encoding=base64 -F content=@- --jq .sha)"
       - name: Publicar APK validado
         env:
           GH_TOKEN: ${{ github.token }}
@@ -80,6 +89,9 @@ jobs:
           fi
           if gh release view v1.0.0 >/dev/null 2>&1; then
             test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v1.0.0" --jq .object.sha)" = "$GITHUB_SHA"
+            prior=$(mktemp -d)
+            gh release download v1.0.0 --pattern GtheDay.apk --dir "$prior"
+            cmp "$prior/GtheDay.apk" dist/GtheDay.apk
             exit 0
           fi
           gh release create v1.0.0 --target "$GITHUB_SHA" --title 'GtheDay 1.0.0' \

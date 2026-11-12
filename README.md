@@ -19,3 +19,7 @@ Com JDK 17, SDK Android 35 e Gradle 8.11.1:
     gradle :app:testReleaseUnitTest :app:assembleRelease
 
 O fluxo do GitHub Actions assina o APK, verifica sua assinatura e testa o arquivo em um emulador Android antes de publicar a versão. O teste altera o relógio do emulador e deve ser executado em um Android de teste. Chaves e senhas ficam fora do código-fonte.
+
+Para atualizar a instalação em versões futuras, use a mesma chave de assinatura. O processo de build aceita a chave PKCS12 em `GTHEDAY_KEYSTORE_BASE64` e a senha em `GTHEDAY_SIGN_PASSWORD` como segredos do GitHub Actions.
+
+Se a permissão de alarmes exatos for revogada enquanto o app estiver fechado, abra o GtheDay para ativar o agendamento aproximado.

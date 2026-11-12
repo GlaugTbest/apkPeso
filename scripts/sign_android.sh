@@ -5,12 +5,17 @@ signing=$(mktemp -d)
 trap 'rm -rf -- "$signing"' EXIT
 
 export GTHEDAY_SIGN_PASSWORD
-GTHEDAY_SIGN_PASSWORD=$(openssl rand -hex 24)
+if [[ -n "${GTHEDAY_KEYSTORE_BASE64:-}" ]]; then
+    test -n "$GTHEDAY_SIGN_PASSWORD"
+    printf '%s' "$GTHEDAY_KEYSTORE_BASE64" | base64 -d > "$signing/gtheday.p12"
+else
+    GTHEDAY_SIGN_PASSWORD=$(openssl rand -hex 24)
+    keytool -genkeypair -storetype PKCS12 -keystore "$signing/gtheday.p12" \
+        -storepass:env GTHEDAY_SIGN_PASSWORD -keypass:env GTHEDAY_SIGN_PASSWORD \
+        -alias gtheday -keyalg RSA -keysize 3072 -validity 10950 \
+        -dname 'CN=GtheDay Android'
+fi
 printf '%s\n' "$GTHEDAY_SIGN_PASSWORD" > "$signing/password.txt"
-keytool -genkeypair -storetype PKCS12 -keystore "$signing/gtheday.p12" \
-    -storepass:env GTHEDAY_SIGN_PASSWORD -keypass:env GTHEDAY_SIGN_PASSWORD \
-    -alias gtheday -keyalg RSA -keysize 3072 -validity 10950 \
-    -dname 'CN=GtheDay Android'
 
 tools=$(dirname "$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)")
 mkdir -p dist evidence
